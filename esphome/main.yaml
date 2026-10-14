@@ -1,25 +1,19 @@
 # =======================================================
-#   ESP32 Project Template — заглушка конфига
+#   ESP32 Workbench Lamp — умная настольная рабочая лампа с лупой
+#   https://github.com/kuksenkoandrey/esp32-workbench-lamp
 # =======================================================
-# Замени name, friendly_name и содержимое под свой проект.
-
-substitutions:
-  name: esp32-project
-  friendly_name: "ESP32 Project"
 
 esphome:
-  name: ${name}
-  friendly_name: ${friendly_name}
+  name: workbench-lamp
+  friendly_name: "Workbench Lamp"
 
 esp32:
-  variant: esp32c6
-  board: esp32-c6-devkitc-1
+  variant: esp32c3
   flash_size: 4MB
   framework:
     type: esp-idf
 
 logger:
-  level: DEBUG
 
 api:
   encryption:
@@ -32,22 +26,60 @@ wifi:
   ssid: !secret wifi_ssid
   password: !secret wifi_password
   ap:
-    ssid: "${friendly_name} Fallback"
+    ssid: "Workbench Lamp Fallback"
     password: !secret fallback_password
 
 captive_portal:
 
-# ---------- Секция датчиков (пример) ----------
-# sensor:
-#   - platform: ...
-#     ...
+# ---------- ШИМ-выходы на родные транзисторы AO3400 (N-канальные) ----------
+output:
+  - platform: ledc
+    pin: GPIO0              # Холодный канал
+    id: output_cold_white
+    frequency: 4000Hz
+    zero_means_zero: true
 
-# ---------- Секция переключателей (пример) ----------
-# switch:
-#   - platform: ...
-#     ...
+  - platform: ledc
+    pin: GPIO1              # Тёплый канал
+    id: output_warm_white
+    frequency: 4000Hz
+    zero_means_zero: true
 
-# ---------- Секция кнопок (пример) ----------
-# button:
-#   - platform: ...
-#     ...
+# ---------- Единый интерфейс лампы для Home Assistant ----------
+light:
+  - platform: cwww
+    name: "Рабочая Лампа"
+    id: desktop_lamp
+    cold_white: output_cold_white
+    warm_white: output_warm_white
+
+    # Диапазон цветовой температуры в Кельвинах
+    cold_white_color_temperature: 6500K
+    warm_white_color_temperature: 2700K
+
+    # Плавность изменения яркости и цвета
+    default_transition_length: 0.5s
+
+# ---------- Сенсорная кнопка с логикой ВКЛ/ВЫКЛ ----------
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO2
+      mode: INPUT_PULLDOWN
+    name: "Физическая кнопка лампы"
+    internal: true
+    on_press:
+      then:
+        - if:
+            condition:
+              light.is_on: desktop_lamp
+            then:
+              # Лампа включена — выключаем
+              - light.turn_off: desktop_lamp
+            else:
+              # Лампа выключена — включаем на 100% и 4600K
+              - light.turn_on:
+                  id: desktop_lamp
+                  brightness: 100%
+                  color_temperature: 4600K
+                  color_temperature: 4600K
