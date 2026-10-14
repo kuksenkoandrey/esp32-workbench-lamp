@@ -1,0 +1,20 @@
+# ESPHome
+.esphome/
+build/
+.pio/
+.vscode/
+
+# Секреты — НИКОГДА не заливать!
+secrets.yaml
+secrets.*.yaml
+
+# Временные файлы
+*.bin
+*.elf
+*.log
+*.tmp
+
+# Системные файлы
+.DS_Store
+Thumbs.db
+desktop.ini
